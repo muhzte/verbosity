@@ -6,7 +6,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/bwmarrin/discordgo"
+	"github.com/muhzte/verbosity/internal/bot"
 
 	"github.com/muhzte/verbosity/internal/config"
 )
@@ -17,19 +17,15 @@ func main() {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
-	session, err := discordgo.New("Bot " + cfg.DiscordToken)
+	b, err := bot.New(cfg)
 	if err != nil {
-		log.Fatalf("Failed to load config: %v", err)
+		log.Fatalf("Failed to create bot: %v", err)
 	}
 
-	session.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
-		log.Printf("Verbosity is online! Logged in as %s#%s", r.User.Username, r.User.Discriminator)
-	})
-
-	if err := session.Open(); err != nil {
-		log.Fatalf("Failed to connect to Discord: %v", err)
+	if err := b.Start(); err != nil {
+		log.Fatalf("Failed to start bot: %v", err)
 	}
-	defer session.Close()
+	defer b.Stop()
 
 	log.Println("Verbosity is running. Press Ctrl+C to exit.")
 
