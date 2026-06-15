@@ -1,62 +1,70 @@
 package bot
 
 import (
-	"github.com/bwmarrin/discordgo"
+	"context"
+	"log"
+	"time"
+
+	"github.com/disgoorg/disgo/discord"
+	"github.com/disgoorg/disgo/events"
 )
 
-func (b *Bot) handlePing(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	respond(s, i, "Pong. Verbosity is online.")
+func (b *Bot) handleCommand(e *events.ApplicationCommandInteractionCreate) {
+	data := e.SlashCommandInteractionData()
+
+	switch data.CommandName() {
+	case "ping":
+		b.handlePing(e)
+	case "join":
+		b.handleJoin(e)
+	case "leave":
+		b.handleLeave(e)
+	}
 }
 
-func (b *Bot) handleJoin(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	guild, err := s.State.Guild(i.GuildID)
-	if err != nil {
-		respond(s, i, "I couldn't look up this server's info.")
-		return
+func (b *Bot) handlePing(e *events.ApplicationCommandInteractionCreate) {
+	if err := e.CreateMessage(discord.MessageCreate{Content: "Pong! Verbosity is online."}); err != nil {
+		log.Printf("Ping: Failed to Respond: %v", err)
 	}
-
-	var voiceChannelID string
-	for _, vs := range guild.VoiceStates {
-		if vs.UserID == i.Member.User.ID {
-			voiceChannelID = vs.ChannelID
-			break
-		}
-	}
-
-	if voiceChannelID == "" {
-		respond(s, i, "You need to be in a voice channel for me to join.")
-		return
-	}
-
-	_, err = s.ChannelVoiceJoin(i.GuildID, voiceChannelID, false, false)
-	if err != nil {
-		respond(s, i, "I couldn't join your voice channel.")
-		return
-	}
-
-	respond(s, i, "Joined your voice channel.")
 }
 
-func (b *Bot) handleLeave(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	vc, ok := s.VoiceConnections[i.GuildID]
-	if !ok {
-		respond(s, i, "I'm not currently in a voice channel here.")
+func (b *Bot) handleJoin(e *events.ApplicationCommandInteractionCreate) {
+	voiceState, ok := b.Client.Caches.VoiceState(*e.GuildID(), e.User().ID)
+	if !ok || voiceState.ChannelID == nil {
+		respond(e, "You need to be in a voice channel for me to join.")
 		return
 	}
 
-	if err := vc.Disconnect(); err != nil {
-		respond(s, i, "I had trouble leaving the voice channel.")
+	conn := b.Client.VoiceManager.CreateConn(*e.GuildID())
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := conn.Open(ctx, *voiceState.ChannelID, false, false); err != nil {
+		log.Printf("Join: Failed to open voice connection: %v", err)
+		respond(e, "I couldn't join your voice channel.")
 		return
 	}
 
-	respond(s, i, "Left the voice channel.")
+	respond(e, "Joined your voice channel.")
 }
 
-func respond(s *discordgo.Session, i *discordgo.InteractionCreate, message string) {
-	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Content: message,
-		},
-	})
+func (b *Bot) handleLeave(e *events.ApplicationCommandInteractionCreate) {
+	conn := b.Client.VoiceManager.GetConn(*e.GuildID())
+	if conn == nil {
+		respond(e, "I'm not currently in a voice channel here.")
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	conn.Close(ctx)
+
+	respond(e, "Left the voice channel.")
+}
+
+func respond(e *events.ApplicationCommandInteractionCreate, message string) {
+	if err := e.CreateMessage(discord.MessageCreate{Content: message}); err != nil {
+		log.Printf("Respond: Failed to send: %v", err)
+	}
 }

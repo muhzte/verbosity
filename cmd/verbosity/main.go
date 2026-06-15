@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
 	"os/signal"
@@ -22,10 +23,11 @@ func main() {
 		log.Fatalf("Failed to create bot: %v", err)
 	}
 
-	if err := b.Start(); err != nil {
+	ctx := context.Background()
+	if err := b.Start(ctx); err != nil {
 		log.Fatalf("Failed to start bot: %v", err)
 	}
-	defer b.Stop()
+	defer b.Stop(ctx)
 
 	log.Println("Verbosity is running. Press Ctrl+C to exit.")
 
