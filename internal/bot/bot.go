@@ -7,11 +7,12 @@ import (
 
 	"github.com/disgoorg/disgo"
 	"github.com/disgoorg/disgo/bot"
+	"github.com/disgoorg/disgo/cache"
 	"github.com/disgoorg/disgo/events"
 	"github.com/disgoorg/disgo/gateway"
 	"github.com/disgoorg/disgo/voice"
-	"github.com/disgoorg/snowflake/v2"
 	"github.com/disgoorg/godave/golibdave"
+	"github.com/disgoorg/snowflake/v2"
 	"github.com/muhzte/verbosity/internal/config"
 )
 
@@ -29,6 +30,9 @@ func New(cfg *config.Config) (*Bot, error) {
 				gateway.IntentGuilds,
 				gateway.IntentGuildVoiceStates,
 			),
+		),
+		bot.WithCacheConfigOpts(
+			cache.WithCaches(cache.FlagsAll),
 		),
 		bot.WithVoiceManagerConfigOpts(
 
