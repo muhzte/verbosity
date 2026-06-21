@@ -13,16 +13,21 @@ import (
 	"github.com/disgoorg/disgo/voice"
 	"github.com/disgoorg/godave/golibdave"
 	"github.com/disgoorg/snowflake/v2"
+	"github.com/muhzte/verbosity/internal/buffer"
 	"github.com/muhzte/verbosity/internal/config"
 )
 
 type Bot struct {
-	Client *bot.Client
-	cfg    *config.Config
+	Client    *bot.Client
+	cfg       *config.Config
+	bufferMgr *buffer.Manager
 }
 
 func New(cfg *config.Config) (*Bot, error) {
-	b := &Bot{cfg: cfg}
+	b := &Bot{
+		cfg:       cfg,
+		bufferMgr: buffer.NewManager(),
+	}
 
 	client, err := disgo.New(cfg.DiscordToken,
 		bot.WithGatewayConfigOpts(

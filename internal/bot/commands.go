@@ -21,6 +21,10 @@ var commandDefinitions = []discord.ApplicationCommandCreate{
 		Name:        "leave",
 		Description: "Make Verbosity leave its current voice channel.",
 	},
+	discord.SlashCommandCreate{
+		Name:        "bufferstatus",
+		Description: "Show how much audio Verbosity has buffered for you.",
+	},
 }
 
 func registerCommands(ctx context.Context, client *bot.Client, guildID snowflake.ID) error {
