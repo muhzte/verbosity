@@ -28,4 +28,4 @@ func (r *BufferReceiver) ReceiveOpusFrame(userID snowflake.ID, packet *voice.Pac
 }
 
 func (r *BufferReceiver) CleanupUser(userID snowflake.ID) {}
-func (r *BufferReceiver) Close()
+func (r *BufferReceiver) Close()                          {}
