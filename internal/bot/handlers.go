@@ -42,7 +42,6 @@ func (b *Bot) handleJoin(e *events.ApplicationCommandInteractionCreate) {
 	}
 
 	conn := b.Client.VoiceManager.CreateConn(*e.GuildID())
-	conn.SetOpusFrameReceiver(verbosityvoice.NewBufferReceiver(b.bufferMgr))
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -52,6 +51,8 @@ func (b *Bot) handleJoin(e *events.ApplicationCommandInteractionCreate) {
 		respond(e, "I couldn't join your voice channel.")
 		return
 	}
+
+	conn.SetOpusFrameReceiver(verbosityvoice.NewBufferReceiver(b.bufferMgr))
 
 	respond(e, "Joined your voice channel.")
 }
