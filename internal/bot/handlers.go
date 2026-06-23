@@ -37,7 +37,7 @@ func (b *Bot) handlePing(e *events.ApplicationCommandInteractionCreate) {
 func (b *Bot) handleJoin(e *events.ApplicationCommandInteractionCreate) {
 	voiceState, ok := b.Client.Caches.VoiceState(*e.GuildID(), e.User().ID)
 	if !ok || voiceState.ChannelID == nil {
-		respond(e, "You need to be im a voice channel for me to join.")
+		respond(e, "You need to be in a voice channel for me to join.")
 		return
 	}
 	
