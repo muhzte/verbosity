@@ -16,6 +16,10 @@ func NewBufferReceiver(bufferMgr *buffer.Manager) *BufferReceiver {
 }
 
 func (r *BufferReceiver) ReceiveOpusFrame(userID snowflake.ID, packet *voice.Packet) error {
+	if userID == 0 {
+		return nil
+	}
+	
 	opus := make([]byte, len(packet.Opus))
 	copy(opus, packet.Opus)
 
