@@ -25,6 +25,22 @@ var commandDefinitions = []discord.ApplicationCommandCreate{
 		Name:        "bufferstatus",
 		Description: "Show how much audio Verbosity has buffered for you.",
 	},
+	discord.SlashCommandCreate{
+		Name: "clip",
+		Description: "Export a voice evidence clip for a user.",
+		Options: []discord.ApplicationCommandOption{
+			discord.ApplicationCommandOptionUser{
+				Name: "user",
+				Description: "The user to clip.",
+				Required: true,
+			},
+			discord.ApplicationCommandOptionInt{
+				Name: "seconds",
+				Description: "How many seconds to clip (1-30). Defaults to 30.",
+				Required: false,
+			},
+		},
+	},
 }
 
 func registerCommands(ctx context.Context, client *bot.Client, guildID snowflake.ID) error {

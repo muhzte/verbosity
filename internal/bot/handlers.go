@@ -4,11 +4,13 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/events"
 
+	"github.com/muhzte/verbosity/internal/audio"
 	"github.com/muhzte/verbosity/internal/buffer"
 	verbosityvoice "github.com/muhzte/verbosity/internal/voice"
 )
@@ -25,6 +27,8 @@ func (b *Bot) handleCommand(e *events.ApplicationCommandInteractionCreate) {
 		b.handleLeave(e)
 	case "bufferstatus":
 		b.handleBufferStatus(e)
+	case "clip":
+		b.HandleClip(e)
 	}
 }
 
@@ -78,6 +82,76 @@ func (b *Bot) handleLeave(e *events.ApplicationCommandInteractionCreate) {
 	conn.Close(ctx)
 
 	respond(e, "Left the voice channel.")
+}
+
+func (b *Bot) handleClip(e *events.ApplicationCommandInteractionCreate) {
+	data := e.SlashCommandInteractionData()
+
+	targetID := data.Snowflake("user")
+
+	seconds := 30
+	if s, ok := data.OptInt("seconds"); ok && s > 0 && s <= 30 {
+		seconds = s
+	}
+
+	if err := e.DeferCreateMessage(false); err != nil {
+		log.Printf("Clip: Defer failed: %v", err)
+		return
+	}
+
+	frames := b.bufferMgr.Snapshot(targetID)
+	if len(frames) == 0 {
+		followUp(e, fmt.Sprintf("No audio buffered for <@%d> - are they in a monitored voice channel?", targetID))
+		return
+	}
+
+	maxFrames := seconds * buffer.FrameRate
+	if len(frames) > maxFrames {
+		frames = frames[len(frames)-maxFrames:]
+	}
+
+	clip, err := audio.Export(frames)
+	if err != nil {
+		log.Printf("Clip: Export Failed: %v", err)
+		followUp(e, "Failed to export audio clip.")
+		return
+	}
+	defer os.Remove(clip.Path)
+
+	f, err := os.Open(clip.Path)
+	if err != nil {
+		log.Printf("Clip: Open temp file: %v", err)
+		followUp(e, "Failed to read exported clip.")
+		return
+	}
+	defer f.Close()
+
+	displayName := fmt.Sprintf("<@%d>", targetID)
+	if member, ok := e.Client().Caches.Member(*e.GuildID(), targetID); ok {
+		displayName = member.User.Username
+	}
+
+	msg := fmt.Sprintf(
+		"📎 **Voice Clip** - %s\n**Duration:** %.1fs (%d frames)\n**Captured:** %s UTC",
+		displayName,
+		clip.Duration,
+		clip.FrameCount,
+		clip.CapturedAt.Format(time.DateTime),
+	)
+
+	filename := fmt.Sprintf("clip-%d-%d.ogg", targetID, clip.CapturedAt.Unix())
+
+	_, err = e.Client().Rest.CreateFollowupMessage(
+		e.ApplicationID(),
+		e.Token(),
+		discord.NewMessageCreateBuilder().
+		SetContent(msg).
+		AddFile(filename, f).
+		Build(),
+	)
+	if err != nil {
+		log.Printf("Clip: Send Failed: %v", err)
+	}
 }
 
 func (b *Bot) handleBufferStatus(e *events.ApplicationCommandInteractionCreate) {
